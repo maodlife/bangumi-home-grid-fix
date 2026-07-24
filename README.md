@@ -22,6 +22,16 @@
 
 脚本只计算以整数或小数编号开头的正片（例如 `519.`、`12.5.`），忽略 `SP`、`OP`、`ED` 等其他章节类型。
 
+## 效果对比
+
+### 使用前
+
+[![使用前：首页格子错误地从连续观看进度开始显示](./screenshots/before.png)](./screenshots/before.png)
+
+### 使用后
+
+[![使用后：首页格子从最高已看正片开始显示](./screenshots/after.png)](./screenshots/after.png)
+
 ## 工作原理
 
 脚本不修改 Bangumi 账户中保存的连续观看进度，只修正首页的显示和交互映射：
