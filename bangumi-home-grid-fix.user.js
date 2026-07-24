@@ -269,6 +269,7 @@
       if (!Number.isFinite(sequence)) {
         continue;
       }
+      const status = readEpisodeStatus(item);
 
       seenEpisodeIds.add(id);
       episodes.push({
@@ -280,12 +281,15 @@
         id,
         sequence,
         sequenceLabel: labelMatch[1],
-        status: readEpisodeStatus(item),
+        status,
         subtitle: (item.querySelector('h6 > span.tip')?.textContent ?? '')
           .replace(/^\s*\/\s*/, '')
           .trim(),
         title: labelMatch[2].trim(),
-        watched: item.querySelector('.statusWatched') !== null,
+        watched: status === 'watched',
+        watchedAt: status === 'watched'
+          ? (item.querySelector('cite small.grey.rr')?.textContent ?? '').trim()
+          : '',
       });
     }
 
@@ -525,6 +529,8 @@
   }
 
   function updateTooltipMetadata(tooltip, episode) {
+    updateTooltipWatchedAt(tooltip, episode);
+
     const walker = document.createTreeWalker(tooltip, NodeFilter.SHOW_TEXT);
     const textNodes = [];
     while (walker.nextNode()) {
@@ -558,6 +564,31 @@
         episode.commentCount ? `+${episode.commentCount}` : '+0',
       );
       textNode.textContent = text;
+    }
+  }
+
+  function updateTooltipWatchedAt(tooltip, episode) {
+    const pattern = /^\u770b\u8fc7\s*[:\uff1a]\s*\d{4}-\d{1,2}-\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/;
+    const candidates = Array.from(tooltip.querySelectorAll('*')).filter((element) => (
+      !element.closest('.epStatusTool')
+      && pattern.test((element.textContent ?? '').trim())
+    ));
+    const target = candidates.find((element) => (
+      !Array.from(element.children).some((child) => (
+        pattern.test((child.textContent ?? '').trim())
+      ))
+    ));
+    if (!target) {
+      return;
+    }
+
+    if (episode.status === 'watched' && episode.watchedAt) {
+      const prefix = (target.textContent ?? '').match(
+        /^(\s*\u770b\u8fc7\s*[:\uff1a]\s*)/,
+      )?.[1] ?? '\u770b\u8fc7: ';
+      target.textContent = `${prefix}${episode.watchedAt}`;
+    } else {
+      target.remove();
     }
   }
 
@@ -991,6 +1022,9 @@
         }
         episode.status = readGridLinkStatus(progressLink);
         episode.watched = episode.status === 'watched';
+        if (!episode.watched) {
+          episode.watchedAt = '';
+        }
         if (episode.watched && runtime.pendingWatchedId === episodeId) {
           runtime.pendingWatchedId = null;
         }
