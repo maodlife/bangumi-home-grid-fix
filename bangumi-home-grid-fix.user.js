@@ -485,19 +485,43 @@
     const discussionLink = Array.from(tooltip.querySelectorAll('a[href]')).find((link) => {
       try {
         const url = new URL(link.getAttribute('href'), location.origin);
-        return url.pathname === episode.href && url.hash === '#comment_list';
+        return (
+          url.pathname === `/subject/ep/${episode.id}`
+          || (url.pathname === episode.href && url.hash === '#comment_list')
+        );
       } catch {
         return false;
       }
     });
-    if (discussionLink && /\d/.test(discussionLink.textContent ?? '')) {
-      discussionLink.textContent = (discussionLink.textContent ?? '').replace(
-        /\+?\d+/,
-        episode.commentCount ? `+${episode.commentCount}` : '+0',
-      );
+    if (discussionLink) {
+      updateDiscussionCount(discussionLink, episode.commentCount);
     }
     updateTooltipMetadata(tooltip, episode);
     return rebuildEpisodeStatusTool(tooltip, episode, template);
+  }
+
+  function updateDiscussionCount(discussionLink, commentCount) {
+    const value = commentCount ? `+${commentCount}` : '+0';
+    const linkText = discussionLink.textContent ?? '';
+    if (/\+?\d+/.test(linkText)) {
+      discussionLink.textContent = linkText.replace(/\+?\d+/, value);
+      return;
+    }
+
+    for (
+      let sibling = discussionLink.nextSibling;
+      sibling;
+      sibling = sibling.nextSibling
+    ) {
+      const text = sibling.textContent ?? '';
+      if (/\(\s*\+?\d+\s*\)/.test(text)) {
+        sibling.textContent = text.replace(/\+?\d+/, value);
+        return;
+      }
+      if (sibling.nodeType !== Node.TEXT_NODE || text.trim()) {
+        return;
+      }
+    }
   }
 
   function updateTooltipMetadata(tooltip, episode) {
@@ -530,7 +554,7 @@
       );
       text = replaceTooltipValue(
         text,
-        /(\u8ba8\u8bba\s*[:\uff1a]\s*)\+?\d+/,
+        /(\u8ba8\u8bba\s*(?:[:\uff1a]\s*|\(\s*))\+?\d+/,
         episode.commentCount ? `+${episode.commentCount}` : '+0',
       );
       textNode.textContent = text;
